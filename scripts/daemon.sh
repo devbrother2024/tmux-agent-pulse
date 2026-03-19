@@ -1,21 +1,21 @@
 #!/bin/bash
 # tmux AI CLI notification daemon
-# Detects AI CLI tools (Claude Code, Codex CLI) by inspecting child processes
+# Detects AI CLI tools (Claude Code, Codex CLI, Gemini CLI) by inspecting child processes
 # and shows status icons on window names:
 #   💬 = responding (sustained output for 2.5s+)
 #   ✅ = done (output stopped after responding)
 
-SNAPSHOT_DIR="/tmp/claude-tmux-snapshots"
-STATE_DIR="/tmp/claude-tmux-states"
-COUNTER_DIR="/tmp/claude-tmux-counters"
-DONE_COUNTER_DIR="/tmp/claude-tmux-done-counters"
+SNAPSHOT_DIR="/tmp/agent-pulse-snapshots"
+STATE_DIR="/tmp/agent-pulse-states"
+COUNTER_DIR="/tmp/agent-pulse-counters"
+DONE_COUNTER_DIR="/tmp/agent-pulse-done-counters"
 mkdir -p "$SNAPSHOT_DIR" "$STATE_DIR" "$COUNTER_DIR" "$DONE_COUNTER_DIR"
 
-POLL_INTERVAL="${CLAUDE_NOTIFY_INTERVAL:-0.5}"
-THRESHOLD="${CLAUDE_NOTIFY_THRESHOLD:-5}"
-DONE_THRESHOLD="${CLAUDE_NOTIFY_DONE_THRESHOLD:-3}"
-ICON_RESPONDING="${CLAUDE_NOTIFY_ICON_RESPONDING:-💬}"
-ICON_DONE="${CLAUDE_NOTIFY_ICON_DONE:-✅}"
+POLL_INTERVAL="${AGENT_PULSE_INTERVAL:-0.5}"
+THRESHOLD="${AGENT_PULSE_THRESHOLD:-5}"
+DONE_THRESHOLD="${AGENT_PULSE_DONE_THRESHOLD:-3}"
+ICON_RESPONDING="${AGENT_PULSE_ICON_RESPONDING:-💬}"
+ICON_DONE="${AGENT_PULSE_ICON_DONE:-✅}"
 
 # md5 command differs between macOS and Linux
 if command -v md5 &>/dev/null; then
@@ -24,7 +24,7 @@ elif command -v md5sum &>/dev/null; then
   MD5_CMD="md5sum | cut -d' ' -f1"
 fi
 
-CLI_PATTERN="${CLAUDE_NOTIFY_CLI_PATTERN:-claude|codex|gemini}"
+CLI_PATTERN="${AGENT_PULSE_CLI_PATTERN:-claude|codex|gemini}"
 
 while true; do
   VISIBLE=$(tmux list-clients -F '#{session_name}:#{window_index}' 2>/dev/null)
