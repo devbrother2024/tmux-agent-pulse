@@ -31,8 +31,6 @@ tmux에서 Claude Code 응답 상태를 알려주는 플러그인입니다. Clau
 set -g @plugin 'devbrother2024/tmux-claude-notify'
 ```
 
-> **중요:** 이 줄은 반드시 `run '~/.tmux/plugins/tpm/tpm'` **앞에** 위치해야 합니다. TPM은 실행 시점 이전에 선언된 플러그인만 인식합니다.
-
 `prefix + I`를 눌러 설치합니다.
 
 ### 수동 설치
