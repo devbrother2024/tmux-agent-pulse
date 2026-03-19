@@ -21,6 +21,8 @@ tmux에서 Claude Code 응답 상태를 알려주는 플러그인입니다. Clau
 - tmux 3.0+
 - [TPM](https://github.com/tmux-plugins/tpm)
 
+> **참고:** 플러그인 로드 시 tmux 상태바를 자동으로 활성화합니다 (`set -g status on`). 윈도우 이름에 아이콘을 표시하기 위해 필요합니다.
+
 ### TPM으로 설치
 
 `~/.tmux.conf`에 추가:
@@ -51,6 +53,7 @@ run-shell ~/.tmux/plugins/tmux-claude-notify/claude-notify.tmux
 |------|--------|------|
 | `CLAUDE_NOTIFY_INTERVAL` | `0.5` | 폴링 간격 (초) |
 | `CLAUDE_NOTIFY_THRESHOLD` | `5` | 응답 중 판정에 필요한 연속 변경 횟수 |
+| `CLAUDE_NOTIFY_DONE_THRESHOLD` | `3` | 완료 판정에 필요한 연속 미변경 횟수 |
 | `CLAUDE_NOTIFY_ICON_RESPONDING` | `💬` | 응답 중 아이콘 |
 | `CLAUDE_NOTIFY_ICON_DONE` | `✅` | 완료 아이콘 |
 
