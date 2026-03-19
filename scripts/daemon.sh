@@ -33,32 +33,33 @@ while true; do
   PS_TREE=$(ps -eo pid,ppid,args 2>/dev/null)
 
   tmux list-panes -a -F '#{session_name}:#{window_index} #{pane_id} #{pane_pid}' 2>/dev/null | while read TARGET PANE_ID PANE_PID; do
+    PANE_KEY=$(echo "$PANE_ID" | tr -d '%')
+    STATE_FILE="$STATE_DIR/$PANE_KEY"
+    STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "idle")
+
+    # User is viewing this window + done state → clear done icon (before CLI check)
+    if [ "$STATE" = "done" ] && echo "$VISIBLE" | grep -qFx "$TARGET"; then
+      WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
+      CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING) //")
+      [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
+      echo "idle" > "$STATE_FILE"
+      echo "0" > "$COUNTER_DIR/$PANE_KEY"
+      echo "0" > "$DONE_COUNTER_DIR/$PANE_KEY"
+      rm -f "$SNAPSHOT_DIR/$PANE_KEY"
+      continue
+    fi
+
     # Detect AI CLI tools by checking child process args
     echo "$PS_TREE" | awk -v ppid="$PANE_PID" '$2 == ppid' | grep -qE "$CLI_PATTERN" || continue
 
-    PANE_KEY=$(echo "$PANE_ID" | tr -d '%')
     SNAP_FILE="$SNAPSHOT_DIR/$PANE_KEY"
-    STATE_FILE="$STATE_DIR/$PANE_KEY"
     COUNT_FILE="$COUNTER_DIR/$PANE_KEY"
     DONE_COUNT_FILE="$DONE_COUNTER_DIR/$PANE_KEY"
-    STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "idle")
     COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo "0")
     DONE_COUNT=$(cat "$DONE_COUNT_FILE" 2>/dev/null || echo "0")
 
     WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
-    CLEAN_NAME=$(echo "$WINDOW_NAME" | sed "s/^[$ICON_DONE$ICON_RESPONDING] //")
-
-    # User is viewing this window → clear done icon, but keep responding icon
-    if echo "$VISIBLE" | grep -qF "$TARGET"; then
-      if [ "$STATE" = "done" ]; then
-        [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
-        echo "idle" > "$STATE_FILE"
-        echo "0" > "$COUNT_FILE"
-        echo "0" > "$DONE_COUNT_FILE"
-        rm -f "$SNAP_FILE"
-        continue
-      fi
-    fi
+    CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING) //")
 
     # Compare pane output snapshot
     CURRENT=$(tmux capture-pane -t "$PANE_ID" -p -S -3 2>/dev/null | eval "$MD5_CMD")
