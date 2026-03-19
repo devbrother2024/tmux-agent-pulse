@@ -21,6 +21,8 @@ A background daemon polls all tmux panes every 0.5s. It identifies Claude Code p
 - tmux 3.0+
 - [TPM](https://github.com/tmux-plugins/tpm)
 
+> **Note:** The plugin automatically enables the tmux status bar (`set -g status on`) on load, as it's required to display window name icons.
+
 ### With TPM
 
 Add to `~/.tmux.conf`:
@@ -51,6 +53,7 @@ Optional environment variables (set before the plugin loads):
 |----------|---------|-------------|
 | `CLAUDE_NOTIFY_INTERVAL` | `0.5` | Poll interval in seconds |
 | `CLAUDE_NOTIFY_THRESHOLD` | `5` | Consecutive changes needed to detect responding |
+| `CLAUDE_NOTIFY_DONE_THRESHOLD` | `3` | Consecutive unchanged polls needed to detect done |
 | `CLAUDE_NOTIFY_ICON_RESPONDING` | `💬` | Icon for responding state |
 | `CLAUDE_NOTIFY_ICON_DONE` | `✅` | Icon for done state |
 

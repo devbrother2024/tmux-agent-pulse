@@ -5,6 +5,9 @@
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DAEMON_SCRIPT="$CURRENT_DIR/scripts/daemon.sh"
 
+# Ensure status bar is enabled (required to see window name icons)
+tmux set -g status on
+
 # Kill existing daemon if running
 pkill -f "claude-notify.*daemon.sh" 2>/dev/null
 

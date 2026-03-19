@@ -8,10 +8,12 @@
 SNAPSHOT_DIR="/tmp/claude-tmux-snapshots"
 STATE_DIR="/tmp/claude-tmux-states"
 COUNTER_DIR="/tmp/claude-tmux-counters"
-mkdir -p "$SNAPSHOT_DIR" "$STATE_DIR" "$COUNTER_DIR"
+DONE_COUNTER_DIR="/tmp/claude-tmux-done-counters"
+mkdir -p "$SNAPSHOT_DIR" "$STATE_DIR" "$COUNTER_DIR" "$DONE_COUNTER_DIR"
 
 POLL_INTERVAL="${CLAUDE_NOTIFY_INTERVAL:-0.5}"
 THRESHOLD="${CLAUDE_NOTIFY_THRESHOLD:-5}"
+DONE_THRESHOLD="${CLAUDE_NOTIFY_DONE_THRESHOLD:-3}"
 ICON_RESPONDING="${CLAUDE_NOTIFY_ICON_RESPONDING:-💬}"
 ICON_DONE="${CLAUDE_NOTIFY_ICON_DONE:-✅}"
 
@@ -33,8 +35,10 @@ while true; do
     SNAP_FILE="$SNAPSHOT_DIR/$PANE_KEY"
     STATE_FILE="$STATE_DIR/$PANE_KEY"
     COUNT_FILE="$COUNTER_DIR/$PANE_KEY"
+    DONE_COUNT_FILE="$DONE_COUNTER_DIR/$PANE_KEY"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "idle")
     COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo "0")
+    DONE_COUNT=$(cat "$DONE_COUNT_FILE" 2>/dev/null || echo "0")
 
     WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
     CLEAN_NAME=$(echo "$WINDOW_NAME" | sed "s/^[$ICON_DONE$ICON_RESPONDING] //")
@@ -45,6 +49,7 @@ while true; do
         [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
         echo "idle" > "$STATE_FILE"
         echo "0" > "$COUNT_FILE"
+        echo "0" > "$DONE_COUNT_FILE"
         rm -f "$SNAP_FILE"
         continue
       fi
@@ -60,6 +65,7 @@ while true; do
     if [ "$CURRENT" != "$LAST" ]; then
       COUNT=$((COUNT + 1))
       echo "$COUNT" > "$COUNT_FILE"
+      echo "0" > "$DONE_COUNT_FILE"
 
       if [ "$COUNT" -ge "$THRESHOLD" ] && [ "$STATE" != "responding" ]; then
         echo "responding" > "$STATE_FILE"
@@ -67,10 +73,16 @@ while true; do
       fi
     else
       if [ "$STATE" = "responding" ]; then
-        echo "done" > "$STATE_FILE"
-        tmux rename-window -t "$TARGET" "$ICON_DONE $CLEAN_NAME" 2>/dev/null
+        DONE_COUNT=$((DONE_COUNT + 1))
+        echo "$DONE_COUNT" > "$DONE_COUNT_FILE"
+        if [ "$DONE_COUNT" -ge "$DONE_THRESHOLD" ]; then
+          echo "done" > "$STATE_FILE"
+          tmux rename-window -t "$TARGET" "$ICON_DONE $CLEAN_NAME" 2>/dev/null
+          echo "0" > "$COUNT_FILE"
+        fi
+      else
+        echo "0" > "$COUNT_FILE"
       fi
-      echo "0" > "$COUNT_FILE"
     fi
   done
 
