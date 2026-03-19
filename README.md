@@ -1,5 +1,7 @@
 # tmux-claude-notify
 
+**English** | [한국어](README.ko.md)
+
 Claude Code status notifications for tmux. No Claude Code configuration required.
 
 Shows status icons on tmux window names when Claude Code is active in background windows:
