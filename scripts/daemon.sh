@@ -39,13 +39,15 @@ while true; do
     WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
     CLEAN_NAME=$(echo "$WINDOW_NAME" | sed "s/^[$ICON_DONE$ICON_RESPONDING] //")
 
-    # User is viewing this window → reset to idle
+    # User is viewing this window → clear done icon, but keep responding icon
     if echo "$VISIBLE" | grep -qF "$TARGET"; then
-      [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
-      echo "idle" > "$STATE_FILE"
-      echo "0" > "$COUNT_FILE"
-      rm -f "$SNAP_FILE"
-      continue
+      if [ "$STATE" = "done" ]; then
+        [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
+        echo "idle" > "$STATE_FILE"
+        echo "0" > "$COUNT_FILE"
+        rm -f "$SNAP_FILE"
+        continue
+      fi
     fi
 
     # Compare pane output snapshot
