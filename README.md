@@ -1,4 +1,4 @@
-# tmux-claude-notify
+# tmux-agent-pulse
 
 **English** | [한국어](README.ko.md)
 
@@ -28,7 +28,7 @@ A background daemon polls all tmux panes every 0.5s. It inspects child processes
 Add to `~/.tmux.conf`:
 
 ```bash
-set -g @plugin 'devbrother2024/tmux-claude-notify'
+set -g @plugin 'devbrother2024/tmux-agent-pulse'
 ```
 
 Then press `prefix + I` to install.
@@ -36,13 +36,13 @@ Then press `prefix + I` to install.
 ### Manual
 
 ```bash
-git clone https://github.com/devbrother2024/tmux-claude-notify ~/.tmux/plugins/tmux-claude-notify
+git clone https://github.com/devbrother2024/tmux-agent-pulse ~/.tmux/plugins/tmux-agent-pulse
 ```
 
 Add to `~/.tmux.conf`:
 
 ```bash
-run-shell ~/.tmux/plugins/tmux-claude-notify/claude-notify.tmux
+run-shell ~/.tmux/plugins/tmux-agent-pulse/agent-pulse.tmux
 ```
 
 ## Configuration
