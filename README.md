@@ -2,17 +2,17 @@
 
 **English** | [한국어](README.ko.md)
 
-Claude Code status notifications for tmux. No Claude Code configuration required.
+AI CLI status notifications for tmux. Supports Claude Code, Codex CLI, and Gemini CLI out of the box.
 
-Shows status icons on tmux window names when Claude Code is active in background windows:
+Shows status icons on tmux window names when AI CLI tools are active:
 
-- **💬** — Claude is responding (output detected for 2.5s+)
-- **✅** — Claude finished responding (output stopped)
+- **💬** — AI is responding (output detected for 2.5s+)
+- **✅** — AI finished responding (output stopped)
 - Icons auto-clear when you switch to the window
 
 ## How it works
 
-A background daemon polls all tmux panes every 0.5s. It identifies Claude Code panes by their process name (version pattern like `2.1.78`) and compares output snapshots to detect activity changes. No Claude Code hooks or configuration needed.
+A background daemon polls all tmux panes every 0.5s. It inspects child processes of each pane (`ps -eo pid,ppid,args`) to detect AI CLI tools, then compares output snapshots to track activity changes. No hooks or configuration needed.
 
 ## Install
 
@@ -56,6 +56,7 @@ Optional environment variables (set before the plugin loads):
 | `CLAUDE_NOTIFY_DONE_THRESHOLD` | `3` | Consecutive unchanged polls needed to detect done |
 | `CLAUDE_NOTIFY_ICON_RESPONDING` | `💬` | Icon for responding state |
 | `CLAUDE_NOTIFY_ICON_DONE` | `✅` | Icon for done state |
+| `CLAUDE_NOTIFY_CLI_PATTERN` | `claude\|codex\|gemini` | Regex pattern to match CLI tool names in process args |
 
 Example in `~/.tmux.conf`:
 

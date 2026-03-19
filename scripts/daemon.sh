@@ -1,7 +1,7 @@
 #!/bin/bash
-# Claude Code tmux notification daemon
-# Detects Claude Code panes by process name (version pattern N.N.N)
-# and shows status icons on inactive windows:
+# tmux AI CLI notification daemon
+# Detects AI CLI tools (Claude Code, Codex CLI) by inspecting child processes
+# and shows status icons on window names:
 #   💬 = responding (sustained output for 2.5s+)
 #   ✅ = done (output stopped after responding)
 
@@ -24,12 +24,17 @@ elif command -v md5sum &>/dev/null; then
   MD5_CMD="md5sum | cut -d' ' -f1"
 fi
 
+CLI_PATTERN="${CLAUDE_NOTIFY_CLI_PATTERN:-claude|codex|gemini}"
+
 while true; do
   VISIBLE=$(tmux list-clients -F '#{session_name}:#{window_index}' 2>/dev/null)
 
-  tmux list-panes -a -F '#{session_name}:#{window_index} #{pane_id} #{pane_current_command}' 2>/dev/null | while read TARGET PANE_ID CMD; do
-    # Claude Code pane detection (version pattern: N.N.N)
-    echo "$CMD" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || continue
+  # Snapshot process tree once per poll cycle
+  PS_TREE=$(ps -eo pid,ppid,args 2>/dev/null)
+
+  tmux list-panes -a -F '#{session_name}:#{window_index} #{pane_id} #{pane_pid}' 2>/dev/null | while read TARGET PANE_ID PANE_PID; do
+    # Detect AI CLI tools by checking child process args
+    echo "$PS_TREE" | awk -v ppid="$PANE_PID" '$2 == ppid' | grep -qE "$CLI_PATTERN" || continue
 
     PANE_KEY=$(echo "$PANE_ID" | tr -d '%')
     SNAP_FILE="$SNAPSHOT_DIR/$PANE_KEY"
