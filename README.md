@@ -31,8 +31,6 @@ Add to `~/.tmux.conf`:
 set -g @plugin 'devbrother2024/tmux-claude-notify'
 ```
 
-> **Important:** This line must be placed **before** `run '~/.tmux/plugins/tpm/tpm'`. TPM only recognizes plugins declared before it runs.
-
 Then press `prefix + I` to install.
 
 ### Manual
