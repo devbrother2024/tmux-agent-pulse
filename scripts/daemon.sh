@@ -35,16 +35,14 @@ while true; do
   # Snapshot process tree once per poll cycle
   PS_TREE=$(ps -eo pid,ppid,args 2>/dev/null)
 
+  # Phase 1: Update per-pane states (runs in subshell via pipe, writes to state files)
   tmux list-panes -a -F '#{session_name}:#{window_index} #{pane_id} #{pane_pid}' 2>/dev/null | while read TARGET PANE_ID PANE_PID; do
     PANE_KEY=$(echo "$PANE_ID" | tr -d '%')
     STATE_FILE="$STATE_DIR/$PANE_KEY"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "idle")
 
-    # User is viewing this window + done/waiting state → clear icon (before CLI check)
+    # User is viewing this window + done/waiting state → reset pane state to idle
     if ([ "$STATE" = "done" ] || [ "$STATE" = "waiting" ]) && echo "$VISIBLE" | grep -qFx "$TARGET"; then
-      WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
-      CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING|$ICON_WAITING) //")
-      [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
       echo "idle" > "$STATE_FILE"
       echo "0" > "$COUNTER_DIR/$PANE_KEY"
       echo "0" > "$DONE_COUNTER_DIR/$PANE_KEY"
@@ -61,9 +59,6 @@ while true; do
     COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo "0")
     DONE_COUNT=$(cat "$DONE_COUNT_FILE" 2>/dev/null || echo "0")
 
-    WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
-    CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING|$ICON_WAITING) //")
-
     # Compare pane output snapshot
     CURRENT=$(tmux capture-pane -t "$PANE_ID" -p -S -3 2>/dev/null | eval "$MD5_CMD")
     LAST=$(cat "$SNAP_FILE" 2>/dev/null)
@@ -78,7 +73,6 @@ while true; do
 
       if [ "$COUNT" -ge "$THRESHOLD" ] && [ "$STATE" != "responding" ]; then
         echo "responding" > "$STATE_FILE"
-        [ "$WINDOW_NAME" != "$ICON_RESPONDING $CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$ICON_RESPONDING $CLEAN_NAME" 2>/dev/null
       fi
     else
       if [ "$STATE" = "responding" ] || [ "$STATE" = "waiting" ]; then
@@ -90,11 +84,9 @@ while true; do
           if echo "$PANE_TEXT" | grep -qE "$WAITING_PATTERN"; then
             if [ "$STATE" != "waiting" ]; then
               echo "waiting" > "$STATE_FILE"
-              tmux rename-window -t "$TARGET" "$ICON_WAITING $CLEAN_NAME" 2>/dev/null
             fi
           else
             echo "done" > "$STATE_FILE"
-            tmux rename-window -t "$TARGET" "$ICON_DONE $CLEAN_NAME" 2>/dev/null
           fi
           echo "0" > "$COUNT_FILE"
         fi
@@ -102,6 +94,37 @@ while true; do
         echo "0" > "$COUNT_FILE"
       fi
     fi
+  done
+
+  # Phase 2: Aggregate per-window state and update icons
+  # For each window, find the highest-priority pane state and set the icon accordingly
+  tmux list-windows -a -F '#{session_name}:#{window_index}' 2>/dev/null | while read WIN; do
+    HIGHEST=0  # 0=idle, 1=done, 2=responding, 3=waiting
+
+    # Iterate panes in this window, find highest priority state
+    for PANE_ID in $(tmux list-panes -t "$WIN" -F '#{pane_id}' 2>/dev/null); do
+      PANE_KEY=$(echo "$PANE_ID" | tr -d '%')
+      PANE_STATE=$(cat "$STATE_DIR/$PANE_KEY" 2>/dev/null || echo "idle")
+      case "$PANE_STATE" in
+        waiting)    P=3 ;;
+        responding) P=2 ;;
+        done)       P=1 ;;
+        *)          P=0 ;;
+      esac
+      [ "$P" -gt "$HIGHEST" ] && HIGHEST=$P
+    done
+
+    WINDOW_NAME=$(tmux display-message -t "$WIN" -p '#{window_name}' 2>/dev/null) || continue
+    CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING|$ICON_WAITING) //")
+
+    case "$HIGHEST" in
+      3) DESIRED="$ICON_WAITING $CLEAN_NAME" ;;
+      2) DESIRED="$ICON_RESPONDING $CLEAN_NAME" ;;
+      1) DESIRED="$ICON_DONE $CLEAN_NAME" ;;
+      *) DESIRED="$CLEAN_NAME" ;;
+    esac
+
+    [ "$WINDOW_NAME" != "$DESIRED" ] && tmux rename-window -t "$WIN" "$DESIRED" 2>/dev/null
   done
 
   sleep "$POLL_INTERVAL"
