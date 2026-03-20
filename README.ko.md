@@ -7,8 +7,13 @@ tmux에서 AI CLI 도구의 응답 상태를 알려주는 플러그인입니다.
 AI CLI 도구가 동작 중일 때 윈도우 이름에 상태 아이콘을 표시합니다:
 
 - **💬** — AI가 응답 중 (2.5초 이상 출력 감지)
+- **❓** — 사용자 입력 대기 중 (권한 요청 프롬프트 감지)
 - **✅** — AI 응답 완료 (출력 중단)
 - 해당 윈도우로 전환하면 아이콘 자동 제거
+
+## 데모
+
+![tmux-agent-pulse 데모](./assets/demo.gif)
 
 ## 왜 tmux-agent-pulse인가?
 
@@ -63,7 +68,9 @@ run-shell ~/.tmux/plugins/tmux-agent-pulse/agent-pulse.tmux
 | `AGENT_PULSE_DONE_THRESHOLD` | `3` | 완료 판정에 필요한 연속 미변경 횟수 |
 | `AGENT_PULSE_ICON_RESPONDING` | `💬` | 응답 중 아이콘 |
 | `AGENT_PULSE_ICON_DONE` | `✅` | 완료 아이콘 |
+| `AGENT_PULSE_ICON_WAITING` | `❓` | 대기 중 아이콘 (권한 요청) |
 | `AGENT_PULSE_CLI_PATTERN` | `claude\|codex\|gemini` | CLI 도구 감지용 정규식 패턴 |
+| `AGENT_PULSE_WAITING_PATTERN` | `Do you want to allow` | 권한 요청 감지용 정규식 패턴 |
 
 `~/.tmux.conf` 설정 예시:
 

@@ -3,6 +3,7 @@
 # Detects AI CLI tools (Claude Code, Codex CLI, Gemini CLI) by inspecting child processes
 # and shows status icons on window names:
 #   💬 = responding (sustained output for 2.5s+)
+#   ❓ = waiting (output stopped + permission prompt detected)
 #   ✅ = done (output stopped after responding)
 
 SNAPSHOT_DIR="/tmp/agent-pulse-snapshots"
@@ -16,6 +17,8 @@ THRESHOLD="${AGENT_PULSE_THRESHOLD:-5}"
 DONE_THRESHOLD="${AGENT_PULSE_DONE_THRESHOLD:-3}"
 ICON_RESPONDING="${AGENT_PULSE_ICON_RESPONDING:-💬}"
 ICON_DONE="${AGENT_PULSE_ICON_DONE:-✅}"
+ICON_WAITING="${AGENT_PULSE_ICON_WAITING:-❓}"
+WAITING_PATTERN="${AGENT_PULSE_WAITING_PATTERN:-Do you want to allow}"
 
 # md5 command differs between macOS and Linux
 if command -v md5 &>/dev/null; then
@@ -37,10 +40,10 @@ while true; do
     STATE_FILE="$STATE_DIR/$PANE_KEY"
     STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "idle")
 
-    # User is viewing this window + done state → clear done icon (before CLI check)
-    if [ "$STATE" = "done" ] && echo "$VISIBLE" | grep -qFx "$TARGET"; then
+    # User is viewing this window + done/waiting state → clear icon (before CLI check)
+    if ([ "$STATE" = "done" ] || [ "$STATE" = "waiting" ]) && echo "$VISIBLE" | grep -qFx "$TARGET"; then
       WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
-      CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING) //")
+      CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING|$ICON_WAITING) //")
       [ "$WINDOW_NAME" != "$CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$CLEAN_NAME" 2>/dev/null
       echo "idle" > "$STATE_FILE"
       echo "0" > "$COUNTER_DIR/$PANE_KEY"
@@ -59,7 +62,7 @@ while true; do
     DONE_COUNT=$(cat "$DONE_COUNT_FILE" 2>/dev/null || echo "0")
 
     WINDOW_NAME=$(tmux display-message -t "$TARGET" -p '#{window_name}' 2>/dev/null) || continue
-    CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING) //")
+    CLEAN_NAME=$(echo "$WINDOW_NAME" | sed -E "s/^($ICON_DONE|$ICON_RESPONDING|$ICON_WAITING) //")
 
     # Compare pane output snapshot
     CURRENT=$(tmux capture-pane -t "$PANE_ID" -p -S -3 2>/dev/null | eval "$MD5_CMD")
@@ -78,12 +81,21 @@ while true; do
         [ "$WINDOW_NAME" != "$ICON_RESPONDING $CLEAN_NAME" ] && tmux rename-window -t "$TARGET" "$ICON_RESPONDING $CLEAN_NAME" 2>/dev/null
       fi
     else
-      if [ "$STATE" = "responding" ]; then
+      if [ "$STATE" = "responding" ] || [ "$STATE" = "waiting" ]; then
         DONE_COUNT=$((DONE_COUNT + 1))
         echo "$DONE_COUNT" > "$DONE_COUNT_FILE"
         if [ "$DONE_COUNT" -ge "$DONE_THRESHOLD" ]; then
-          echo "done" > "$STATE_FILE"
-          tmux rename-window -t "$TARGET" "$ICON_DONE $CLEAN_NAME" 2>/dev/null
+          # Check if pane is showing a permission prompt
+          PANE_TEXT=$(tmux capture-pane -t "$PANE_ID" -p -S -10 2>/dev/null)
+          if echo "$PANE_TEXT" | grep -qE "$WAITING_PATTERN"; then
+            if [ "$STATE" != "waiting" ]; then
+              echo "waiting" > "$STATE_FILE"
+              tmux rename-window -t "$TARGET" "$ICON_WAITING $CLEAN_NAME" 2>/dev/null
+            fi
+          else
+            echo "done" > "$STATE_FILE"
+            tmux rename-window -t "$TARGET" "$ICON_DONE $CLEAN_NAME" 2>/dev/null
+          fi
           echo "0" > "$COUNT_FILE"
         fi
       else

@@ -7,8 +7,13 @@ AI CLI status notifications for tmux. Supports Claude Code, Codex CLI, and Gemin
 Shows status icons on tmux window names when AI CLI tools are active:
 
 - **💬** — AI is responding (output detected for 2.5s+)
+- **❓** — AI is waiting for user input (permission prompt detected)
 - **✅** — AI finished responding (output stopped)
 - Icons auto-clear when you switch to the window
+
+## Demo
+
+![tmux-agent-pulse demo](./assets/demo.gif)
 
 ## Why tmux-agent-pulse?
 
@@ -63,7 +68,9 @@ Optional environment variables (set before the plugin loads):
 | `AGENT_PULSE_DONE_THRESHOLD` | `3` | Consecutive unchanged polls needed to detect done |
 | `AGENT_PULSE_ICON_RESPONDING` | `💬` | Icon for responding state |
 | `AGENT_PULSE_ICON_DONE` | `✅` | Icon for done state |
+| `AGENT_PULSE_ICON_WAITING` | `❓` | Icon for waiting (permission prompt) state |
 | `AGENT_PULSE_CLI_PATTERN` | `claude\|codex\|gemini` | Regex pattern to match CLI tool names in process args |
+| `AGENT_PULSE_WAITING_PATTERN` | `Do you want to allow` | Regex pattern to detect permission prompts in pane output |
 
 Example in `~/.tmux.conf`:
 
